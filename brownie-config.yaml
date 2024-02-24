@@ -1,0 +1,17 @@
+dotenv: .env
+
+dependencies:
+  - smartcontractkit/chainlink-brownie-contracts@0.8.0
+  - OpenZeppelin/openzeppelin-contracts@5.0.1
+
+wallet:
+  sepolia: ${PRIVATE_KEY}
+compiler:
+  solc:
+    remappings:
+      - "@chainlink=smartcontractkit/chainlink-brownie-contracts@0.8.0"
+      - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@5.0.1"
+
+networks:
+  sepolia:
+    eth_usd_contract: "0x694AA1769357215DE4FAC081bf1f309aDC325306"
