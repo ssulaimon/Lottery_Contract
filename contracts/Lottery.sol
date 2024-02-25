@@ -2,16 +2,23 @@
 pragma solidity >=0.8.0 <0.9.0;
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-contract Lottery{
+import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBase.sol";
+contract Lottery is VRFConsumerBase{
     address owner;
     AggregatorV3Interface priceFeed;
     uint256 entryPrice;
     uint256 maxPayAmont;
-    constructor(address _priceFeed, uint256 _entryFee, uint256 _maxPayAmount){
+    bytes32 keyHash;
+    uint256 linkFee;
+    uint256 winner;
+
+    constructor(address _priceFeed, uint256 _entryFee, uint256 _maxPayAmount, address _vrf, address _linkToken, bytes32 _keyHash, uint256 _fee) VRFConsumerBase(_vrf, _linkToken){
         owner = msg.sender;
         priceFeed = AggregatorV3Interface(_priceFeed);
         entryPrice = _entryFee * (10**18);
         maxPayAmont = _maxPayAmount * (10**18);
+        keyHash = _keyHash;
+        linkFee = _fee;
     }
     string public fee = Strings.toString(entryPrice / (10**18));
     string public feeMax = Strings.toString(maxPayAmont / (10**18));
@@ -61,17 +68,30 @@ contract Lottery{
         require(lotteryStatus == Status.ENDED, "You can select winner when the lottery is ended");
         _;
     }
-   //selecting a random winner of the lottery and lottery is closed 
+
+
+   //selecting a random winner of the lottery and lottery is closed  and also request for a random number 
   
-    function selectWinner()public payable checkingstatus{}
+    function selectWinner()public payable checkingstatus onlyOwner {
+        require(lotteryStatus == Status.CLOSED, "This function can only be called when the lottery is closed ");
+        bytes32 requestId = requestRandomness(keyHash, linkFee);
+
+        
+
+    }
+    // this function is called by the chianlink node that response the random number 
+    function fulfillRandomness(bytes32 _requestId, uint256 _randomness) internal override{
+        uint256 winnerIndex = _randomness % players.length;
+        winner = winnerIndex;
+    }
 
     modifier onlyOwner{
         require(msg.sender == owner, "Only owner an call this function");
         _;
     }
     //deployer changing the lottery status 
-    function changeLotteryStatus() public onlyOwner{
-
+    function changeLotteryStatus(Status _status) public onlyOwner{
+        lotteryStatus = _status;
     }
 
     //check how much have been locked in the contract 
